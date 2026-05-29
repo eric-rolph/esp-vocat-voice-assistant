@@ -78,7 +78,10 @@ async def proxy_handler(client_ws):
                                 logger.info(f"OpenAI -> ESP32: Audio chunk ({len(raw_audio)} bytes)")
                             else:
                                 # Send other JSON events as text
-                                logger.info(f"OpenAI -> ESP32: {message[:100]}...")
+                                if data.get("type") == "error":
+                                    logger.error(f"OpenAI ERROR: {message}")
+                                else:
+                                    logger.info(f"OpenAI -> ESP32: {message[:100]}...")
                                 await client_ws.send(message)
                         except json.JSONDecodeError:
                             # Not JSON, forward as is
