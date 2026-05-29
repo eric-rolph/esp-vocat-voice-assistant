@@ -91,3 +91,7 @@ yarn-error.log*
 
 # Arduino configuration with secrets
 arduino/atom_echo_voice/config.h
+
+# ESP-IDF component manager and locks
+**/managed_components/
+**/dependencies.lock

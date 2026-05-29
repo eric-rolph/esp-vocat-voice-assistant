@@ -20,13 +20,13 @@
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 #include <driver/i2s.h>
-#include <FastLED.h>  // For LED control without M5Atom
+// #include <// FastLED.h>  // For LED control without M5Atom
 #include "config.h"
 #include "base64.h"
 
 // FastLED for SK6812 RGB LED
 #define NUM_LEDS 1
-CRGB leds[NUM_LEDS];
+// CRGB // leds[NUM_LEDS];
 
 // I2S Port Numbers
 #define I2S_PORT_MIC I2S_NUM_0
@@ -76,12 +76,12 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT_PULLUP);
   
   // Initialize FastLED for SK6812
-  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
-  FastLED.setBrightness(20);
+  // FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, NUM_LEDS);
+  // FastLED.setBrightness(20);
   
   // Set initial LED color (blue = initializing)
-  leds[0] = CRGB::Blue;
-  FastLED.show();
+  // leds[0] = CRGB::Blue;
+  // FastLED.show();
   currentState = STATE_INIT;
   
   // Setup WiFi
@@ -98,8 +98,8 @@ void setup() {
   
   Serial.println("Setup complete - Ready!");
   currentState = STATE_READY;
-  leds[0] = CRGB::Green;  // Green = ready
-  FastLED.show();
+  // leds[0] = CRGB::Green;  // Green = ready
+  // FastLED.show();
 }
 
 void loop() {
@@ -128,8 +128,8 @@ void setupWiFi() {
   Serial.println(WIFI_SSID);
   
   currentState = STATE_WIFI_CONNECTING;
-  leds[0] = CRGB::Yellow;  // Yellow = connecting
-  FastLED.show();
+  // leds[0] = CRGB::Yellow;  // Yellow = connecting
+  // FastLED.show();
   
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -149,8 +149,8 @@ void setupWiFi() {
   } else {
     Serial.println("\nWiFi connection failed!");
     currentState = STATE_ERROR;
-    leds[0] = CRGB::Red;  // Red = error
-    FastLED.show();
+    // leds[0] = CRGB::Red;  // Red = error
+    // FastLED.show();
     while(1) delay(1000);
   }
 }
@@ -256,18 +256,8 @@ void setupWebSocket() {
   
   currentState = STATE_WS_CONNECTING;
   
-  // Configure WebSocket
-  String wsUrl = String("wss://api.openai.com/v1/realtime?model=") + REALTIME_MODEL;
-  
-  // Parse URL
-  webSocket.beginSSL("api.openai.com", 443, "/v1/realtime?model=" + String(REALTIME_MODEL));
-  
-  // Set authorization header
-  String authHeader = "Authorization: Bearer " + String(OPENAI_API_KEY);
-  webSocket.setExtraHeaders(authHeader.c_str());
-  
-  // Set additional headers
-  webSocket.setExtraHeaders("OpenAI-Beta: realtime=v1");
+  // Connect to local Python Proxy via plain WebSocket
+  webSocket.begin(PROXY_IP, PROXY_PORT, "/");
   
   // Set event handler
   webSocket.onEvent(webSocketEvent);
@@ -283,15 +273,15 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
     case WStype_DISCONNECTED:
       Serial.println("[WS] Disconnected!");
       currentState = STATE_WIFI_CONNECTED;
-      leds[0] = CRGB::Yellow;  // Yellow = reconnecting
-      FastLED.show();
+      // leds[0] = CRGB::Yellow;  // Yellow = reconnecting
+      // FastLED.show();
       break;
       
     case WStype_CONNECTED:
       Serial.println("[WS] Connected to OpenAI Realtime API!");
       currentState = STATE_WS_CONNECTED;
-      leds[0] = CRGB::Cyan;  // Cyan = connected
-      FastLED.show();
+      // leds[0] = CRGB::Cyan;  // Cyan = connected
+      // FastLED.show();
       
       // Send session configuration
       sendSessionUpdate();
@@ -316,8 +306,8 @@ void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
           sessionId = doc["session"]["id"].as<String>();
           Serial.printf("[WS] Session created: %s\n", sessionId.c_str());
           currentState = STATE_READY;
-          leds[0] = CRGB::Green;  // Green = ready
-          FastLED.show();
+          // leds[0] = CRGB::Green;  // Green = ready
+          // FastLED.show();
         }
         else if (strcmp(eventType, "response.audio.delta") == 0) {
           // Audio response from OpenAI
@@ -384,8 +374,8 @@ void sendSessionUpdate() {
 void recordAndSendAudio() {
   Serial.println("[MIC] Recording audio...");
   currentState = STATE_RECORDING;
-  leds[0] = CRGB::Magenta;  // Magenta = recording
-  FastLED.show();
+  // leds[0] = CRGB::Magenta;  // Magenta = recording
+  // FastLED.show();
   
   // Buffer for audio samples
   int16_t audioBuffer[MIC_BUFFER_SIZE];
@@ -423,8 +413,8 @@ void recordAndSendAudio() {
   }
   
   currentState = STATE_READY;
-  leds[0] = CRGB::Green;  // Green = ready
-  FastLED.show();
+  // leds[0] = CRGB::Green;  // Green = ready
+  // FastLED.show();
 }
 
 void handleButton() {
