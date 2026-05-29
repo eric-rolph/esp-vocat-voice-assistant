@@ -18,7 +18,8 @@ if not OPENAI_API_KEY:
     exit(1)
 
 # OpenAI Realtime API Endpoint
-OPENAI_WS_URL = "wss://api.openai.com/v1/realtime?model=gpt-realtime"
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-realtime-preview")
+OPENAI_WS_URL = f"wss://api.openai.com/v1/realtime?model={OPENAI_MODEL}"
 
 async def proxy_handler(client_ws):
     """
