@@ -81,6 +81,7 @@ bool RealTimeAgent::on_startup()
         esp_websocket_client_start(ws_client_);
     }
     
+    set_listening(true);
     trigger_general_event(GeneralEvent::Started);
     return true;
 }
@@ -118,6 +119,7 @@ bool RealTimeAgent::on_encoder_data_ready(const uint8_t *data, size_t data_size)
     if (is_speaking() && (now - last_audio_recv_time_ > 1500)) {
         ESP_LOGI(TAG, "Speaking timeout, resetting speaking state");
         set_speaking(false);
+        set_listening(true);
     }
 
     if (is_speaking()) {
@@ -153,6 +155,7 @@ bool RealTimeAgent::on_websocket_event(int32_t event_id, void *event_data)
         if (data->op_code == 0x02) { // Binary payload (raw audio from server)
             if (!is_speaking()) {
                 ESP_LOGI(TAG, "Server audio received, setting speaking=true");
+                set_listening(false);
                 set_speaking(true);
             }
             last_audio_recv_time_ = esp_timer_get_time() / 1000;
@@ -182,9 +185,11 @@ bool RealTimeAgent::parse_server_message(const char *data, size_t len)
         if (type_str == "response.output_audio.done" || type_str == "response.done") {
             ESP_LOGI(TAG, "Server finished sending audio response: %s", type_str.c_str());
             set_speaking(false);
+            set_listening(true);
         } else if (type_str == "input_audio_buffer.speech_started") {
             ESP_LOGI(TAG, "Speech started detected by server VAD, stopping speaking state");
             set_speaking(false);
+            set_listening(true);
         }
     }
     cJSON_Delete(root);

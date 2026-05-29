@@ -607,9 +607,17 @@ void AI_Agents::process_emote_when_speaking_status_changed()
                 EmoteHelper::FunctionId::SetEventMessage,
                 BROOKESIA_DESCRIBE_TO_STR(EmoteHelper::EventMessageType::Speak)
             );
-        } else if (!is_listening()) {
-            // Only hide event message when the agent is not listening
-            EmoteHelper::call_function_async(EmoteHelper::FunctionId::HideEventMessage);
+            EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "speaking");
+        } else {
+            if (!is_listening()) {
+                // Only hide event message when the agent is not listening
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::HideEventMessage);
+            }
+            if (is_listening()) {
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "listening");
+            } else {
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
+            }
         }
         is_speaking_ = is_speaking;
     };
@@ -643,9 +651,17 @@ void AI_Agents::process_emote_when_listening_status_changed()
                 EmoteHelper::FunctionId::SetEventMessage,
                 BROOKESIA_DESCRIBE_TO_STR(EmoteHelper::EventMessageType::Listen)
             );
-        } else if (!is_speaking()) {
-            // Only hide event message when the agent is not speaking
-            EmoteHelper::call_function_async(EmoteHelper::FunctionId::HideEventMessage);
+            EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "listening");
+        } else {
+            if (!is_speaking()) {
+                // Only hide event message when the agent is not speaking
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::HideEventMessage);
+            }
+            if (is_speaking()) {
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "speaking");
+            } else {
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
+            }
         }
         is_listening_ = is_listening;
     };
