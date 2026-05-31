@@ -607,14 +607,14 @@ void AI_Agents::process_emote_when_speaking_status_changed()
                 EmoteHelper::FunctionId::SetEventMessage,
                 BROOKESIA_DESCRIBE_TO_STR(EmoteHelper::EventMessageType::Speak)
             );
-            EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "speaking");
+            EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
         } else {
             if (!is_listening()) {
                 // Only hide event message when the agent is not listening
                 EmoteHelper::call_function_async(EmoteHelper::FunctionId::HideEventMessage);
             }
             if (is_listening()) {
-                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "listening");
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
             } else {
                 EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
             }
@@ -651,14 +651,14 @@ void AI_Agents::process_emote_when_listening_status_changed()
                 EmoteHelper::FunctionId::SetEventMessage,
                 BROOKESIA_DESCRIBE_TO_STR(EmoteHelper::EventMessageType::Listen)
             );
-            EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "listening");
+            EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
         } else {
             if (!is_speaking()) {
                 // Only hide event message when the agent is not speaking
                 EmoteHelper::call_function_async(EmoteHelper::FunctionId::HideEventMessage);
             }
             if (is_speaking()) {
-                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "speaking");
+                EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
             } else {
                 EmoteHelper::call_function_async(EmoteHelper::FunctionId::SetEmoji, "neutral");
             }

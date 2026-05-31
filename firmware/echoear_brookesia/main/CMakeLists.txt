@@ -13,7 +13,7 @@ idf_component_register(
     SRCS ${SRCS}
     INCLUDE_DIRS "."
     EMBED_TXTFILES ${EMBEDDED_FILES}
-    REQUIRES esp_websocket_client
+    REQUIRES esp_websocket_client mbedtls
     PRIV_REQUIRES espressif__esp_board_manager
 )
 

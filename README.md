@@ -1,251 +1,118 @@
-# M5Stack ATOM Echo - Voice AI Gateway
+# Echo Voice Gateway — ESP32 Voice AI Assistant
 
-Real-time voice assistant powered by OpenAI's Realtime API for the M5Stack ATOM Echo (ESP32). Multiple implementation approaches with full hardware support.
+Real-time voice assistant that connects directly to OpenAI's Realtime API over WebSocket. Captures audio, streams it to OpenAI, and plays back spoken AI responses — all running on an ESP32-S3 with no proxy or intermediate server.
 
 ## 🎯 Project Status
 
-**Current State:** Three working implementations with different trade-offs:
+**Active Development:** `firmware/echoear_brookesia/` — ESP-IDF + ESP-Brookesia framework
 
-- ✅ **ESP-IDF (PlatformIO)** - Full hardware support, WebSocket ready, production candidate
-- ✅ **MicroPython** - Networking works, audio blocked by I2S PDM limitation  
-- ✅ **Arduino** - Full hardware access, but WebSocket challenges for Realtime API
+**Current State:**
+- ✅ Direct WSS connection to OpenAI Realtime API (no proxy)
+- ✅ TLS handshake + certificate validation
+- ✅ Session configuration (voice, VAD, modalities)
+- ✅ Bidirectional audio pipeline (mic → OpenAI → speaker)
+- ✅ Server-side VAD for natural turn-taking
+- ✅ Self-interruption prevention with precise playback duration tracking
+- ✅ Display expressions mapped to supported 'neutral' emoji asset
 
-**Recommended:** ESP-IDF implementation for production use
-
-## 📋 Features
-
-### Hardware Support
-- 🎤 **PDM Microphone** - SPM1423 working (ESP-IDF only)
-- 🔊 **I2S Speaker** - NS4168 amplifier with audio playback
-- 💡 **RGB LED** - SK6812 with multiple status indicators
-- 🔘 **Button** - Press-to-talk and function control
-
-### Software Features  
-- 🌐 **WiFi** - Stable connection with auto-reconnect
-- 🔌 **WebSocket** - Client ready for OpenAI Realtime API
-- 🎙️ **Audio I/O** - PDM input, I2S output with proper buffering
-- 📡 **Base64** - Audio encoding for API transmission
-- 🔐 **TLS/SSL** - Secure connections
+> For detailed AI agent development context, see [AGENTS.md](AGENTS.md).
 
 ## 🛠️ Hardware
 
-**Device:** M5Stack ATOM Echo (ESP32-PICO-D4)
+**Primary Device:** ESP-VOCAT v1.2 Board
+- ESP32-S3 (QFN56) — 240MHz Dual Core, 4MB Flash, 16MB PSRAM
+- I2S audio codec with microphone and speaker
+- Round LCD display with touch (ST77916 + CST816S)
+- Wi-Fi 802.11 b/g/n + BLE 5.0
+- Wake word: "Hi, ESP"
 
-**Specifications:**
-- ESP32-PICO-D4: 240MHz Dual Core, 4MB Flash
-- SPM1423 PDM Microphone (GPIO33=CLK, GPIO23=DATA)  
-- NS4168 I2S Speaker (GPIO19=BCK, GPIO33=WS, GPIO22=DATA)
-- SK6812 RGB LED (GPIO27)
-- Button (GPIO39)
-
-**Key Detail:** GPIO33 is shared between mic clock and speaker WS - handled through careful I2S channel management.
+**Legacy Hardware:** M5Stack ATOM Echo — see `platformio-espidf/` directory (not actively maintained)
 
 ## 📁 Project Structure
 
-\\\
-m5stack-atom-echo-voice-assistant/
-├── platformio-espidf/           # ⭐ ESP-IDF implementation (RECOMMENDED)
-│   ├── src/main.c              # Complete working firmware
-│   ├── platformio.ini          # PlatformIO configuration
-│   ├── credentials.h           # WiFi/API credentials (gitignored)
-│   ├── credentials.h.example   # Template for credentials
-│   ├── DEPLOYMENT_STATUS.md    # Current implementation status
-│   ├── PIN_CONFIGURATION.md    # Hardware wiring guide
-│   └── components/             # ESP WebSocket client component
-├── arduino/                     # Arduino C++ implementation
-│   ├── atom_echo_voice/        # Arduino sketch
-│   ├── config.h.example        # Configuration template
-│   ├── SETUP_INSTRUCTIONS.md   # Arduino IDE setup guide
-│   └── ARCHITECTURAL_BLOCKER.md # WebSocket limitations
-├── micropython/                 # MicroPython implementation
-│   ├── main.py                 # Complete networking code
-│   ├── README.md               # MicroPython-specific docs
-│   └── test_*.py               # Diagnostic utilities
-├── server/                      # Python backend server
-│   ├── main.py                 # FastAPI server
-│   ├── requirements.txt        # Python dependencies
-│   └── .env.example            # Server configuration template
-└── firmware/                    # Legacy/experimental builds
-\\\
+```
+echo-voice-gateway/
+├── firmware/echoear_brookesia/    # ⭐ ACTIVE — ESP-IDF firmware
+│   ├── main/
+│   │   ├── modules/
+│   │   │   ├── agent_realtime.cpp  # OpenAI Realtime API agent
+│   │   │   ├── agent_realtime.hpp  # Agent class declaration
+│   │   │   └── ai_agents.cpp       # Agent registration & init
+│   │   ├── Kconfig.projbuild       # Menuconfig options
+│   │   └── CMakeLists.txt          # Build configuration
+│   ├── sdkconfig                   # Build config (gitignored, has API key)
+│   └── managed_components/         # ESP-IDF dependencies (auto-downloaded)
+├── AGENTS.md                        # 📖 AI agent development guide
+├── platformio-espidf/               # Legacy: M5Stack ATOM Echo firmware
+├── arduino/                         # Legacy: Arduino implementation
+├── micropython/                     # Legacy: MicroPython implementation
+└── server/                          # Legacy: Python proxy server (no longer needed)
+```
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- ESP-IDF v5.5
+- ESP-VOCAT v1.2 board (or compatible ESP32-S3 board)
+- OpenAI API key with Realtime API access
+- Wi-Fi network (2.4GHz)
 
-- M5Stack ATOM Echo connected via USB
-- PlatformIO installed (VS Code extension recommended)
-- WiFi network (2.4GHz)
-- OpenAI API key
+### Setup
 
-### Option A: ESP-IDF (Recommended)
-
-\\\ash
-# 1. Clone repository
+```bash
+# 1. Clone
 git clone https://github.com/eric-rolph/m5stack-atom-echo-voice-assistant.git
-cd m5stack-atom-echo-voice-assistant/platformio-espidf
+cd m5stack-atom-echo-voice-assistant/firmware/echoear_brookesia
 
-# 2. Configure credentials
-cp credentials.h.example credentials.h
-# Edit credentials.h with your WiFi SSID, password, and OpenAI API key
+# 2. Configure
+idf.py menuconfig
+# Navigate to: Example Configuration → set API key, model, voice
 
-# 3. Build and upload
-pio run --target upload --upload-port COM9
+# 3. Build & Flash
+idf.py build
+idf.py -p COM4 flash
 
-# 4. Monitor output
-pio device monitor -b 115200
-\\\
+# 4. Monitor (filtered to reduce noise)
+python -m serial.tools.miniterm COM4 115200 --raw
+```
 
-### Option B: Arduino IDE
+### Configuration (via menuconfig)
 
-\\\ash
-# See arduino/SETUP_INSTRUCTIONS.md for detailed setup
-\\\
+| Setting | Key | Default |
+|---------|-----|---------|
+| OpenAI API Key | `EXAMPLE_AGENTS_REALTIME_API_KEY` | (required) |
+| Model | `EXAMPLE_AGENTS_REALTIME_MODEL` | `gpt-4o-realtime-preview` |
+| Voice | `EXAMPLE_AGENTS_REALTIME_VOICE` | `alloy` |
+| System Prompt | `EXAMPLE_AGENTS_REALTIME_SYSTEM_PROMPT` | Short IoT assistant |
 
-### Option C: MicroPython
+## 🔊 Audio Pipeline
 
-\\\ash
-# See micropython/README.md - note: microphone won't work
-\\\
+```
+Microphone → AFE (AEC + VAD) → 16-bit PCM → Base64 → JSON → WSS → OpenAI
+OpenAI → WSS → JSON parse → Base64 decode → PCM → Speaker
+```
 
-## 🎨 LED Status Indicators
+- **Input:** 24kHz, 16-bit, mono PCM
+- **Output:** 24kHz, 16-bit, mono PCM
+- **Protocol:** OpenAI Realtime API over WebSocket (JSON text frames)
+- **VAD:** Server-side (OpenAI handles turn detection)
 
-| Color | Status |
-|-------|--------|
-| 🔵 Blue | Initializing / Startup |
-| 🟡 Yellow | Connecting to WiFi |
-| 🟢 Green | Connected and Ready |
-| 🟣 Magenta | Button Pressed |
-| 🔴 Red | Error |
+## 🏗️ Architecture
 
-## 🔧 Configuration
+The firmware uses **ESP-Brookesia** (Espressif's agent framework):
 
-### ESP-IDF (\credentials.h\)
-
-\\\c
-#define WIFI_SSID "YourWiFiName"
-#define WIFI_PASSWORD "YourWiFiPassword"
-#define OPENAI_API_KEY "sk-your-api-key"
-#define REALTIME_MODEL "gpt-4o-realtime-preview-2024-10-01"
-\\\
-
-### Server (\.env\)
-
-\\\ash
-OPENAI_API_KEY=sk-...
-GEMINI_API_KEY=...
-AI_PROVIDER=openai  # or gemini
-TTS_PROVIDER=openai
-HOST=0.0.0.0
-PORT=8000
-\\\
-
-## 📊 Implementation Comparison
-
-| Feature | ESP-IDF | Arduino | MicroPython |
-|---------|---------|---------|-------------|
-| PDM Mic | ✅ Full | ✅ Full | ❌ No PDM |
-| I2S Speaker | ✅ Yes | ✅ Yes | ✅ Yes |
-| WebSocket | ✅ Component | ⚠️ Limited | ✅ uwebsockets |
-| Memory | ✅ Efficient | ⚠️ Tight | ⚠️ Limited |
-| TLS/SSL | ✅ Native | ✅ Native | ✅ Native |
-| Development | Medium | Easy | Easy |
-| **Recommended** | **✅ Yes** | For prototypes | Learning only |
-
-## 🐛 Known Issues & Solutions
-
-### ESP-IDF
-- ✅ All hardware working
-- 🔄 WebSocket Realtime API integration in progress
-
-### Arduino  
-- ✅ Hardware fully functional
-- ⚠️ WebSocket library limitations for Realtime API (see ARCHITECTURAL_BLOCKER.md)
-
-### MicroPython
-- ❌ PDM microphone unsupported (I2S driver limitation)
-- ✅ All networking code functional
-- Not recommended for this project
-
-## 🔍 Technical Details
-
-### Why ESP-IDF is Recommended
-
-1. **Native PDM Support** - I2S driver exposes \I2S_MODE_PDM\ flag
-2. **WebSocket Component** - Official esp_websocket_client with reconnection
-3. **Memory Management** - Direct control over FreeRTOS heap
-4. **SSL/TLS** - ESP-TLS with certificate bundle support
-5. **Production Ready** - Battle-tested framework for IoT devices
-
-### Audio Pipeline
-
-\\\
-PDM Mic → I2S RX → 16-bit PCM → Base64 → WebSocket → OpenAI
-OpenAI → WebSocket → Base64 Decode → PCM → I2S TX → Speaker
-\\\
-
-### GPIO Sharing Solution
-
-GPIO33 serves dual purpose:
-- **Microphone:** PDM Clock (I2S0 RX)
-- **Speaker:** Word Select/LRC (I2S1 TX)
-
-This works because ESP32 has two I2S peripherals (I2S0, I2S1) with independent pin configurations.
-
-## 📚 Documentation
-
-- [DEPLOYMENT_STATUS.md](platformio-espidf/DEPLOYMENT_STATUS.md) - Current implementation details
-- [PIN_CONFIGURATION.md](platformio-espidf/PIN_CONFIGURATION.md) - Complete wiring guide
-- [ARCHITECTURAL_BLOCKER.md](arduino/ARCHITECTURAL_BLOCKER.md) - Arduino WebSocket challenges
-- [SETUP_INSTRUCTIONS.md](arduino/SETUP_INSTRUCTIONS.md) - Arduino IDE setup
-- [micropython/README.md](micropython/README.md) - MicroPython implementation notes
-
-## 🎯 Roadmap
-
-### Phase 1: Hardware Validation ✅
-- [x] PDM microphone working
-- [x] I2S speaker working  
-- [x] LED control
-- [x] Button input
-- [x] WiFi connection
-
-### Phase 2: API Integration 🔄
-- [x] WebSocket client
-- [x] Base64 encoding
-- [ ] OpenAI Realtime API handshake
-- [ ] Bidirectional audio streaming
-- [ ] Session management
-
-### Phase 3: Polish 📋
-- [ ] Voice activity detection
-- [ ] Wake word support
-- [ ] OTA updates
-- [ ] Battery optimization
-
-## 🤝 Contributing
-
-Contributions welcome! Areas of interest:
-- OpenAI Realtime API integration
-- Audio processing optimization
-- Power management
-- Documentation improvements
+- `RealTimeAgent` extends `esp_brookesia::agent::Base`
+- Connects directly to `wss://api.openai.com/v1/realtime` — no proxy needed
+- All large buffers allocated in PSRAM to preserve internal SRAM
+- TLS via `mbedtls` with ESP certificate bundle
+- Automatic SNTP time sync (required for TLS certificate validation)
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details
+MIT License — see [LICENSE](LICENSE) for details.
 
 ## 🙏 Acknowledgments
 
-- **M5Stack** - Excellent hardware and examples
-- **Espressif** - ESP-IDF framework and I2S drivers
-- **OpenAI** - Realtime API
-- **Community** - Forum posts and GitHub issues that solved PDM mysteries
-
-## 📞 Support
-
-- **Issues:** [GitHub Issues](https://github.com/eric-rolph/m5stack-atom-echo-voice-assistant/issues)
-- **Hardware Docs:** [M5Stack ATOM Echo](https://docs.m5stack.com/en/atom/atomecho)
-- **API Docs:** [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime)
-
----
-
-**Status:** Active development - ESP-IDF implementation recommended for production use
+- **Espressif** — ESP-IDF framework, ESP-Brookesia agent system, and audio front-end
+- **OpenAI** — Realtime API
+- **M5Stack** — Original ATOM Echo hardware inspiration
