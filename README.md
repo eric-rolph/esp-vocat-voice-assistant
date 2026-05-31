@@ -1,6 +1,6 @@
-# Echo Voice Gateway — ESP32 Voice AI Assistant
+# ESP-VoCat Voice Assistant
 
-Real-time voice assistant that connects directly to OpenAI's Realtime API over WebSocket. Captures audio, streams it to OpenAI, and plays back spoken AI responses — all running on an ESP32-S3 with no proxy or intermediate server.
+An intelligent AI development kit configured as a real-time voice assistant connecting directly to OpenAI's Realtime API over WebSocket. Captures audio, streams it to OpenAI, and plays back spoken AI responses — all running on an ESP32-S3 with no proxy or intermediate server.
 
 ## 🎯 Project Status
 
@@ -19,11 +19,13 @@ Real-time voice assistant that connects directly to OpenAI's Realtime API over W
 
 ## 🛠️ Hardware
 
-**Primary Device:** ESP-VOCAT v1.2 Board
-- ESP32-S3 (QFN56) — 240MHz Dual Core, 4MB Flash, 16MB PSRAM
-- I2S audio codec with microphone and speaker
-- Round LCD display with touch (ST77916 + CST816S)
-- Wi-Fi 802.11 b/g/n + BLE 5.0
+**Primary Device:** ESP-VoCat v1.2 Board
+- ESP32-S3-WROOM-1-N16R16VA module (16MB Flash, 16MB PSRAM)
+- Dual microphone array (LMA3729T381-OY3S) for local wake-up and sound source localization
+- Built-in 3W speaker with Class D audio amplifier
+- 1.85-inch QSPI circular touch screen (360×360 resolution, ST77916)
+- Wi-Fi 2.4GHz 802.11 b/g/n + Bluetooth 5 (LE)
+- Integrated 3.7V lithium battery management & USB-C interface
 - Wake word: "Hi, ESP"
 
 **Legacy Hardware:** M5Stack ATOM Echo — see `platformio-espidf/` directory (not actively maintained)
