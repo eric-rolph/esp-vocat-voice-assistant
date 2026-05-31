@@ -28,13 +28,11 @@ An intelligent AI development kit configured as a real-time voice assistant conn
 - Integrated 3.7V lithium battery management & USB-C interface
 - Wake word: "Hi, ESP"
 
-**Legacy Hardware:** M5Stack ATOM Echo — see `platformio-espidf/` directory (not actively maintained)
-
 ## 📁 Project Structure
 
-```
-echo-voice-gateway/
-├── firmware/echoear_brookesia/    # ⭐ ACTIVE — ESP-IDF firmware
+```text
+esp-vocat-voice-assistant/
+├── firmware/echoear_brookesia/     # ESP-IDF firmware
 │   ├── main/
 │   │   ├── modules/
 │   │   │   ├── agent_realtime.cpp  # OpenAI Realtime API agent
@@ -44,11 +42,7 @@ echo-voice-gateway/
 │   │   └── CMakeLists.txt          # Build configuration
 │   ├── sdkconfig                   # Build config (gitignored, has API key)
 │   └── managed_components/         # ESP-IDF dependencies (auto-downloaded)
-├── AGENTS.md                        # 📖 AI agent development guide
-├── platformio-espidf/               # Legacy: M5Stack ATOM Echo firmware
-├── arduino/                         # Legacy: Arduino implementation
-├── micropython/                     # Legacy: MicroPython implementation
-└── server/                          # Legacy: Python proxy server (no longer needed)
+└── AGENTS.md                       # 📖 AI agent development guide
 ```
 
 ## 🚀 Quick Start
@@ -63,8 +57,8 @@ echo-voice-gateway/
 
 ```bash
 # 1. Clone
-git clone https://github.com/eric-rolph/m5stack-atom-echo-voice-assistant.git
-cd m5stack-atom-echo-voice-assistant/firmware/echoear_brookesia
+git clone https://github.com/eric-rolph/esp-vocat-voice-assistant.git
+cd esp-vocat-voice-assistant/firmware/echoear_brookesia
 
 # 2. Configure
 idf.py menuconfig
@@ -117,4 +111,3 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 - **Espressif** — ESP-IDF framework, ESP-Brookesia agent system, and audio front-end
 - **OpenAI** — Realtime API
-- **M5Stack** — Original ATOM Echo hardware inspiration

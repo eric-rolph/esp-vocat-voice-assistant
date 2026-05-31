@@ -1,9 +1,0 @@
-fastapi==0.109.0
-uvicorn==0.27.0
-openai==1.12.0
-google-generativeai==0.3.2
-pydub==0.25.1
-pyaudioop==0.3.5
-python-multipart==0.0.6
-websockets>=12.0
-python-dotenv>=1.0.0
