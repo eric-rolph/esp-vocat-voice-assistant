@@ -19,7 +19,7 @@ An intelligent AI development kit configured as a real-time voice assistant conn
 
 ## 🛠️ Hardware
 
-**Primary Device:** ESP-VoCat v1.2 Board
+**Primary Device:** [ESP-VoCat v1.2 Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/user_guide_v1.2.html)
 - ESP32-S3-WROOM-1-N16R16VA module (16MB Flash, 16MB PSRAM)
 - Dual microphone array (LMA3729T381-OY3S) for local wake-up and sound source localization
 - Built-in 3W speaker with Class D audio amplifier
@@ -27,6 +27,8 @@ An intelligent AI development kit configured as a real-time voice assistant conn
 - Wi-Fi 2.4GHz 802.11 b/g/n + Bluetooth 5 (LE)
 - Integrated 3.7V lithium battery management & USB-C interface
 - Wake word: "Hi, ESP"
+
+> For detailed hardware schematics and specifications, consult the [official ESP-VoCat User Guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/user_guide_v1.2.html).
 
 ## 📁 Project Structure
 
