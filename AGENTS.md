@@ -14,7 +14,7 @@
 
 ### Primary Device: ESP32-S3-based Board (ESP-VOCAT v1.2)
 
-This is **NOT** the original M5Stack ATOM Echo anymore. The active hardware is an ESP-VOCAT v1.2 board with:
+The active hardware is an ESP-VOCAT v1.2 board with:
 
 - **SoC:** ESP32-S3 (QFN56, revision v0.2) — dual-core 240MHz, Wi-Fi + BLE
 - **Memory:** 4MB Flash + 16MB PSRAM (AP_1v8) — PSRAM is critical for audio buffers
