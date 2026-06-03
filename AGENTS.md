@@ -1,4 +1,4 @@
-# AI Agent Development Guide — Echo Voice Gateway
+# AI Agent Development Guide — Echo Ear ESP-VOCAT Voice Gateway
 
 > This file provides the full context an AI agent needs to understand, develop, and debug this project. Read this before making any changes.
 
