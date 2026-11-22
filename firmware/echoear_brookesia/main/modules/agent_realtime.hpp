@@ -53,12 +53,13 @@ private:
 
     // For accumulating fragmented WebSocket text frames
     std::string json_accumulator_;
+    bool receiving_text_frame_ = false;
 
     // Authorization header string (built once at activation, must outlive ws_client_)
     std::string ws_uri_;
     std::string auth_header_;
     uint64_t start_playback_time_ = 0;
-    uint32_t total_audio_bytes_ = 0;
+    uint64_t total_audio_bytes_ = 0;
 
     esp_timer_handle_t playback_timer_ = nullptr;
 };

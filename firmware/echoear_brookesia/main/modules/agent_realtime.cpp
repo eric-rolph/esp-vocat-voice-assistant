@@ -18,8 +18,22 @@
 #define BASE64_BUF_SIZE        (AUDIO_FRAME_MAX_SIZE * 4 / 3 + 4)
 #define DECODE_BUF_SIZE        32768   // Incoming audio deltas can be large (e.g. 16k chars)
 #define JSON_SEND_BUF_SIZE     (BASE64_BUF_SIZE + 128)  // Base64 + JSON wrapper
+#define JSON_ACCUMULATOR_MAX_SIZE (128 * 1024)          // Guard against unbounded WS text accumulation
+#define WS_AUDIO_SEND_TIMEOUT_MS  50
+#define WS_CTRL_SEND_TIMEOUT_MS   2000
 
 namespace esp_brookesia::agent {
+
+namespace {
+template <typename T>
+auto ws_event_is_fin(const T *d, int) -> decltype(d->fin, bool()) {
+    return d->fin;
+}
+template <typename T>
+bool ws_event_is_fin(const T *, long) {
+    return true;
+}
+} // namespace
 
 RealTimeAgent::RealTimeAgent()
     : Base(
@@ -256,7 +270,7 @@ bool RealTimeAgent::send_session_update()
     char *json_str = cJSON_PrintUnformatted(root);
     if (json_str) {
         ESP_LOGI(TAG, "Sending session.update (%d bytes)", (int)strlen(json_str));
-        esp_websocket_client_send_text(ws_client_, json_str, strlen(json_str), portMAX_DELAY);
+        esp_websocket_client_send_text(ws_client_, json_str, strlen(json_str), pdMS_TO_TICKS(WS_CTRL_SEND_TIMEOUT_MS));
         cJSON_free(json_str);
     }
     cJSON_Delete(root);
@@ -293,8 +307,10 @@ bool RealTimeAgent::encode_and_send_audio(const uint8_t *data, size_t len)
         return false;
     }
 
-    esp_websocket_client_send_text(ws_client_, json_send_buf_, json_len, portMAX_DELAY);
-    return true;
+    int sent = esp_websocket_client_send_text(
+        ws_client_, json_send_buf_, json_len, pdMS_TO_TICKS(WS_AUDIO_SEND_TIMEOUT_MS)
+    );
+    return sent >= 0;
 }
 
 bool RealTimeAgent::on_encoder_data_ready(const uint8_t *data, size_t data_size)
@@ -322,6 +338,8 @@ bool RealTimeAgent::on_websocket_event(int32_t event_id, void *event_data)
     case WEBSOCKET_EVENT_CONNECTED:
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_CONNECTED to OpenAI Realtime API");
         is_ws_connected_ = true;
+        json_accumulator_.clear();
+        receiving_text_frame_ = false;
         // Send session configuration immediately after connection
         send_session_update();
         break;
@@ -329,17 +347,35 @@ bool RealTimeAgent::on_websocket_event(int32_t event_id, void *event_data)
         ESP_LOGI(TAG, "WEBSOCKET_EVENT_DISCONNECTED");
         is_ws_connected_ = false;
         session_configured_ = false;
+        json_accumulator_.clear();
+        receiving_text_frame_ = false;
+        if (playback_timer_) {
+            esp_timer_stop(playback_timer_);
+        }
         break;
     case WEBSOCKET_EVENT_DATA:
-        if (data->op_code == 0x01) { // Text payload (JSON messages from OpenAI)
-            // Accumulate fragmented text frames
+        if (data->op_code == 0x01 || (data->op_code == 0x00 && receiving_text_frame_)) {
+            // Start of a new text message resets any stale partial buffer
+            if (data->op_code == 0x01 && data->payload_offset == 0) {
+                json_accumulator_.clear();
+                receiving_text_frame_ = true;
+            }
+            // Accumulate fragmented text frames with an upper memory bound
             if (data->data_ptr && data->data_len > 0) {
+                if (json_accumulator_.size() + (size_t)data->data_len > JSON_ACCUMULATOR_MAX_SIZE) {
+                    ESP_LOGW(TAG, "Dropping oversized WS text message (>%d bytes)", JSON_ACCUMULATOR_MAX_SIZE);
+                    json_accumulator_.clear();
+                    receiving_text_frame_ = false;
+                    break;
+                }
                 json_accumulator_.append(data->data_ptr, data->data_len);
             }
-            // Only process when we have the complete message
-            if (data->payload_offset + data->data_len >= data->payload_len) {
+            // Process once the final fragment of the message has arrived
+            bool frame_complete = (data->payload_offset + data->data_len >= data->payload_len);
+            if (frame_complete && ws_event_is_fin(data, 0)) {
                 parse_server_message(json_accumulator_.c_str(), json_accumulator_.size());
                 json_accumulator_.clear();
+                receiving_text_frame_ = false;
             }
         }
         break;
@@ -411,19 +447,19 @@ bool RealTimeAgent::parse_server_message(const char *data, size_t len)
     }
     else if (type_str == "response.done") {
         uint64_t current_time = esp_timer_get_time() / 1000;
-        uint32_t total_duration_ms = total_audio_bytes_ * 1000 / (24000 * 2);
-        uint32_t elapsed_ms = (uint32_t)(current_time - start_playback_time_);
+        uint64_t total_duration_ms = (total_audio_bytes_ * 1000ULL) / (24000ULL * 2ULL);
+        uint64_t elapsed_ms = (current_time >= start_playback_time_) ? (current_time - start_playback_time_) : 0;
         
-        int32_t remaining_ms = (int32_t)total_duration_ms - (int32_t)elapsed_ms;
-        if (remaining_ms < 0) remaining_ms = 0;
+        uint64_t remaining_ms = (total_duration_ms > elapsed_ms) ? (total_duration_ms - elapsed_ms) : 0;
         
         // Add 500ms padding
-        uint32_t timer_delay_ms = remaining_ms + 500;
+        uint64_t timer_delay_ms = remaining_ms + 500ULL;
         
-        ESP_LOGI(TAG, "Response complete, duration: %lums, elapsed: %lums, remaining: %ldms", 
-                 (unsigned long)total_duration_ms, (unsigned long)elapsed_ms, (long)remaining_ms);
+        ESP_LOGI(TAG, "Response complete, duration: %llums, elapsed: %llums, remaining: %llums", 
+                 (unsigned long long)total_duration_ms, (unsigned long long)elapsed_ms, (unsigned long long)remaining_ms);
                  
         if (playback_timer_) {
+            esp_timer_stop(playback_timer_);
             esp_timer_start_once(playback_timer_, timer_delay_ms * 1000ULL);
         }
     }

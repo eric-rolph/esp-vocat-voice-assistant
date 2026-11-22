@@ -30,8 +30,8 @@
 #define POWER_AUDIO_PIN 48
 #define PA_CONTROL_PIN  15
 
-#define WIFI_SSID "test"
-#define WIFI_PASS "test"
+#define WIFI_SSID "YOUR_WIFI_SSID"
+#define WIFI_PASS "YOUR_WIFI_PASSWORD"
 #define WS_URI    "ws://YOUR_SERVER_IP:8080/realtime"
 
 static const char *TAG = "ECHOEAR_PROXY";

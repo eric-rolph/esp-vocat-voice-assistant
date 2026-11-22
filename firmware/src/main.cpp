@@ -14,12 +14,18 @@
 #include <M5Atom.h>
 #include <ArduinoJson.h>
 
-// WiFi Configuration - UPDATE THESE!
-const char *WIFI_SSID = "YOUR_WIFI_SSID";  // Your WiFi name
-const char *WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";  // REPLACE WITH YOUR ACTUAL PASSWORD
+// WiFi Configuration - override via build flags (-DWIFI_SSID=\"...\" -DWIFI_PASSWORD=\"...\") or edit locally (do not commit credentials)
+#ifndef WIFI_SSID
+#define WIFI_SSID "YOUR_WIFI_SSID"
+#endif
+#ifndef WIFI_PASSWORD
+#define WIFI_PASSWORD "YOUR_WIFI_PASSWORD"
+#endif
 
-// Server Configuration - UPDATE THIS!
-const char *SERVER_URL = "http://YOUR_SERVER_IP:8000/api/voice";  // Your server IP:port
+// Server Configuration - override via -DSERVER_URL=\"...\" or edit locally
+#ifndef SERVER_URL
+#define SERVER_URL "http://YOUR_SERVER_IP:8000/api/voice"
+#endif
 
 // I2S Audio Configuration
 #define CONFIG_I2S_BCK_PIN     19
@@ -109,12 +115,21 @@ bool sendAudioToServer(uint8_t* audio_data, size_t audio_len, uint8_t** response
             if (*response_audio) {
                 WiFiClient* stream = http.getStreamPtr();
                 size_t received = 0;
-                while (received < len && stream->available()) {
-                    int chunk = stream->readBytes(*response_audio + received, len - received);
-                    if (chunk > 0) {
-                        received += chunk;
+                unsigned long last_data_ms = millis();
+                while (received < (size_t)len && (stream->connected() || stream->available())) {
+                    if (stream->available()) {
+                        int chunk = stream->readBytes(*response_audio + received, (size_t)len - received);
+                        if (chunk > 0) {
+                            received += (size_t)chunk;
+                            last_data_ms = millis();
+                        }
+                    } else {
+                        if (millis() - last_data_ms > 5000) {
+                            Serial.println("Timed out reading audio response stream");
+                            break;
+                        }
+                        delay(1);
                     }
-                    delay(1);
                 }
                 *response_len = received;
                 http.end();
