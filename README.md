@@ -1,115 +1,111 @@
 # ESP-VoCat Voice Assistant
 
-An intelligent AI development kit configured as a real-time voice assistant connecting directly to OpenAI's Realtime API over WebSocket. Captures audio, streams it to OpenAI, and plays back spoken AI responses — all running on an ESP32-S3 with no proxy or intermediate server.
+[![CI](https://github.com/eric-rolph/esp-vocat-voice-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/eric-rolph/esp-vocat-voice-assistant/actions/workflows/ci.yml)
+[![Platform: ESP32-S3](https://img.shields.io/badge/ESP32--S3-ESP--IDF%205.5-2dd4bf)](firmware/echoear_brookesia)
+[![API: OpenAI Realtime](https://img.shields.io/badge/OpenAI-Realtime%20WSS%20(No%20Proxy)-38bdf8)](firmware/echoear_brookesia/main/modules/agent_realtime.cpp)
+[![License: MIT](https://img.shields.io/badge/license-MIT-34d399)](LICENSE)
 
-## 🎯 Project Status
+Direct-to-OpenAI **Realtime API** voice assistant running natively on an **ESP32-S3 (ESP-VoCat v1.2 / Echo Ear)** over TLS WebSocket — captures 24 kHz audio, streams directly to OpenAI with **no proxy server**, and plays back low-latency spoken responses with echo/self-interruption protection and circular display expressions.
 
-**Active Development:** `firmware/echoear_brookesia/` — ESP-IDF + ESP-Brookesia framework
+---
 
-**Current State:**
-- ✅ Direct WSS connection to OpenAI Realtime API (no proxy)
-- ✅ TLS handshake + certificate validation
-- ✅ Session configuration (voice, VAD, modalities)
-- ✅ Bidirectional audio pipeline (mic → OpenAI → speaker)
-- ✅ Server-side VAD for natural turn-taking
-- ✅ Self-interruption prevention with precise playback duration tracking
-- ✅ Display expressions mapped to supported 'neutral' emoji asset
+## Real-Time Audio & Turn-Taking Pipeline
 
-> For detailed AI agent development context, see [AGENTS.md](AGENTS.md).
+```mermaid
+sequenceDiagram
+    participant Mic as Dual Mic Array (I2S)
+    participant AFE as ESP-AFE (AEC + Wake/VAD)
+    participant Agent as RealTimeAgent (PSRAM)
+    participant OAI as OpenAI Realtime API (WSS)
+    participant Spk as 3W Class-D Speaker & 360x360 LCD
 
-## 🛠️ Hardware
-
-**Primary Device:** [ESP-VoCat v1.2 Board](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/user_guide_v1.2.html)
-- ESP32-S3-WROOM-1-N16R16VA module (16MB Flash, 16MB PSRAM)
-- Dual microphone array (LMA3729T381-OY3S) for local wake-up and sound source localization
-- Built-in 3W speaker with Class D audio amplifier
-- 1.85-inch QSPI circular touch screen (360×360 resolution, ST77916)
-- Wi-Fi 2.4GHz 802.11 b/g/n + Bluetooth 5 (LE)
-- Integrated 3.7V lithium battery management & USB-C interface
-- Wake word: "Hi, ESP"
-
-> For detailed hardware schematics and specifications, consult the [official ESP-VoCat User Guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/user_guide_v1.2.html).
-
-## 📁 Project Structure
-
-```text
-esp-vocat-voice-assistant/
-├── firmware/echoear_brookesia/     # ESP-IDF firmware
-│   ├── main/
-│   │   ├── modules/
-│   │   │   ├── agent_realtime.cpp  # OpenAI Realtime API agent
-│   │   │   ├── agent_realtime.hpp  # Agent class declaration
-│   │   │   └── ai_agents.cpp       # Agent registration & init
-│   │   ├── Kconfig.projbuild       # Menuconfig options
-│   │   └── CMakeLists.txt          # Build configuration
-│   ├── sdkconfig                   # Build config (gitignored, has API key)
-│   └── managed_components/         # ESP-IDF dependencies (auto-downloaded)
-└── AGENTS.md                       # 📖 AI agent development guide
+    Mic->>AFE: 24 kHz 16-bit mono PCM
+    AFE->>Agent: Clean speech frames (echo cancelled)
+    Agent->>OAI: input_audio_buffer.append (Base64 PCM over mbedTLS WSS)
+    Note over OAI: Server-side VAD detects end-of-turn
+    OAI-->>Agent: response.audio.delta (streaming PCM chunks)
+    Agent->>Spk: Base64 decode -> I2S playback + expression update
+    Note over Agent: Playback duration tracker gates mic to prevent self-interruption
 ```
 
-## 🚀 Quick Start
+---
+
+## Firmware Variants
+
+| Directory | Framework | Status | When to Use |
+|---|---|---|---|
+| [`firmware/echoear_brookesia/`](firmware/echoear_brookesia/) | **ESP-IDF 5.5 + ESP-Brookesia** | **Active / Recommended** | Full direct-to-OpenAI Realtime WSS, PSRAM audio buffers, circular 360×360 UI, wake word (`"Hi, ESP"`), and SNTP TLS cert validation. |
+| [`firmware/echoear_pio/`](firmware/echoear_pio/) | PlatformIO + Arduino | Experimental | Lightweight Arduino-framework port for rapid prototyping. |
+| [`firmware/echoear_proxy/`](firmware/echoear_proxy/) | ESP-IDF | Legacy | Earlier proxy-based WebSocket client (superseded by direct WSS in `echoear_brookesia`). |
+| [`server-micropython/`](server-micropython/) | Python | Optional Helper | Companion WebSocket relay used only with the legacy proxy firmware. |
+
+---
+
+## Hardware — ESP-VoCat v1.2
+
+| Subsystem | Specification |
+|---|---|
+| **MCU Module** | ESP32-S3-WROOM-1-N16R16VA (16 MB Flash, 16 MB Octal PSRAM) |
+| **Microphones** | Dual mic array (`LMA3729T381-OY3S`) for AEC, wake word & DOA |
+| **Speaker** | 3 W speaker + integrated Class-D I2S amplifier |
+| **Display** | 1.85" circular QSPI touchscreen (360×360, ST77916) |
+| **Connectivity** | 2.4 GHz Wi-Fi 802.11 b/g/n + Bluetooth 5 LE, USB-C + 3.7 V Li-ion charger |
+| **Audio Format** | 24 kHz, 16-bit signed mono PCM (bidirectional) |
+
+> See the [official ESP-VoCat v1.2 User Guide](https://docs.espressif.com/projects/esp-dev-kits/en/latest/esp32s3/esp-vocat/user_guide_v1.2.html) for schematics and GPIO pin assignments, and [AGENTS.md](AGENTS.md) for AI-assisted firmware development notes.
+
+---
+
+## Quick Start (`echoear_brookesia`)
 
 ### Prerequisites
-- ESP-IDF v5.5
-- ESP-VOCAT v1.2 board (or compatible ESP32-S3 board)
-- OpenAI API key with Realtime API access
-- Wi-Fi network (2.4GHz)
+- **ESP-IDF v5.5**
+- **ESP-VoCat v1.2** (or compatible ESP32-S3 with PSRAM + I2S audio)
+- **OpenAI API key** with Realtime API access
+- 2.4 GHz Wi-Fi network
 
-### Setup
+### Build & Flash
 
 ```bash
-# 1. Clone
 git clone https://github.com/eric-rolph/esp-vocat-voice-assistant.git
 cd esp-vocat-voice-assistant/firmware/echoear_brookesia
 
-# 2. Configure
+# Configure Wi-Fi, OpenAI API key, model & voice via menuconfig (stored in gitignored sdkconfig)
 idf.py menuconfig
-# Navigate to: Example Configuration → set API key, model, voice
 
-# 3. Build & Flash
+# Build & flash
 idf.py build
 idf.py -p COM4 flash
 
-# 4. Monitor (filtered to reduce noise)
+# Serial monitor
 python -m serial.tools.miniterm COM4 115200 --raw
 ```
 
-### Configuration (via menuconfig)
+### Menuconfig Options
 
-| Setting | Key | Default |
-|---------|-----|---------|
-| OpenAI API Key | `EXAMPLE_AGENTS_REALTIME_API_KEY` | (required) |
+| Setting | Kconfig Key | Default |
+|---|---|---|
+| OpenAI API Key | `EXAMPLE_AGENTS_REALTIME_API_KEY` | *(required — never commit `sdkconfig`)* |
 | Model | `EXAMPLE_AGENTS_REALTIME_MODEL` | `gpt-4o-realtime-preview` |
 | Voice | `EXAMPLE_AGENTS_REALTIME_VOICE` | `alloy` |
 | System Prompt | `EXAMPLE_AGENTS_REALTIME_SYSTEM_PROMPT` | Short IoT assistant |
 
-## 🔊 Audio Pipeline
+---
 
+## Project Structure
+
+```text
+esp-vocat-voice-assistant/
+├── firmware/
+│   ├── echoear_brookesia/    # Active ESP-IDF 5.5 + ESP-Brookesia direct-WSS firmware
+│   ├── echoear_pio/          # PlatformIO / Arduino experimental port
+│   └── echoear_proxy/        # Legacy proxy client
+├── server-micropython/       # Optional legacy relay server
+├── tools/pdm_diagnostics/    # PDM microphone test scripts
+├── tests/                    # C++17 unit tests for audio Base64 framing
+└── AGENTS.md                 # AI agent development guide
 ```
-Microphone → AFE (AEC + VAD) → 16-bit PCM → Base64 → JSON → WSS → OpenAI
-OpenAI → WSS → JSON parse → Base64 decode → PCM → Speaker
-```
 
-- **Input:** 24kHz, 16-bit, mono PCM
-- **Output:** 24kHz, 16-bit, mono PCM
-- **Protocol:** OpenAI Realtime API over WebSocket (JSON text frames)
-- **VAD:** Server-side (OpenAI handles turn detection)
+## License
 
-## 🏗️ Architecture
-
-The firmware uses **ESP-Brookesia** (Espressif's agent framework):
-
-- `RealTimeAgent` extends `esp_brookesia::agent::Base`
-- Connects directly to `wss://api.openai.com/v1/realtime` — no proxy needed
-- All large buffers allocated in PSRAM to preserve internal SRAM
-- TLS via `mbedtls` with ESP certificate bundle
-- Automatic SNTP time sync (required for TLS certificate validation)
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
-
-## 🙏 Acknowledgments
-
-- **Espressif** — ESP-IDF framework, ESP-Brookesia agent system, and audio front-end
-- **OpenAI** — Realtime API
+MIT License — see [LICENSE](LICENSE).

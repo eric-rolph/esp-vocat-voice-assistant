@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  firmware-helpers-and-hygiene:
+    name: Audio Framing Unit Tests & Repo Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Compile & run C++ base64 audio codec unit tests
+        run: |
+          g++ -std=c++17 -Wall -Wextra -I tests/mocks -I firmware/echoear_pio/src tests/test_base64.cpp -o test_base64
+          ./test_base64
+      - name: Validate Python scripts, emote JSON & secret hygiene
+        run: |
+          python - <<'PY'
+          import json, pathlib, py_compile, re, sys
+
+          root = pathlib.Path(".")
+          for py in list(root.glob("server-micropython/*.py")) + list(root.glob("tools/**/*.py")):
+              py_compile.compile(str(py), doraise=True)
+              print("Syntax OK:", py)
+
+          for jf in root.glob("firmware/**/emote.json"):
+              json.loads(jf.read_text(encoding="utf-8"))
+              print("JSON OK:", jf)
+
+          secret_pat = re.compile(r"sk-(proj-)?[A-Za-z0-9_-]{24,}")
+          for f in root.rglob("*"):
+              if ".git" in f.parts or not f.is_file():
+                  continue
+              if f.suffix in (".c", ".cpp", ".h", ".hpp", ".py", ".md", ".ini", ".yml", ".yaml", ".json"):
+                  txt = f.read_text(encoding="utf-8", errors="ignore")
+                  if secret_pat.search(txt):
+                      print("ERROR: Potential OpenAI API key detected in", f)
+                      sys.exit(1)
+          print("Secret & config hygiene checks passed!")
+          PY
